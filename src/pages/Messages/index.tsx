@@ -1,123 +1,148 @@
-import React, {  useEffect, useState } from "react";
-import {  KeyboardAvoidingView, Platform, FlatList, Text, TextInput, TouchableOpacity, View } from "react-native";
-import auth from '@react-native-firebase/auth';
-import { styles } from "./styles";
-import firestore, { FirebaseFirestoreTypes } from '@react-native-firebase/firestore'
-import MessagesList from "../../components/MessagesList";
+import React, { useEffect, useState } from "react";
+import {
+  KeyboardAvoidingView,
+  Platform,
+  FlatList,
+  TextInput,
+  TouchableOpacity,
+  View,
+} from "react-native";
+import auth from "@react-native-firebase/auth";
+import firestore, {
+  FirebaseFirestoreTypes,
+} from "@react-native-firebase/firestore";
 import { SafeAreaView } from "react-native-safe-area-context";
 
-import Feather from 'react-native-vector-icons/Feather';
+import Feather from "react-native-vector-icons/Feather";
+import { useNavigation } from "@react-navigation/native";
+import { StackScreenProps } from "@react-navigation/stack";
+import MessagesList from "../../components/MessagesList";
+import { styles } from "./styles";
 
-type IChatMessages = FirebaseFirestoreTypes.DocumentData
+type IChatMessages = FirebaseFirestoreTypes.DocumentData;
 
-export default function Messages({ route }: any) {
-    const [newMessage, setNewMessage] = useState('')
-    const [chatMessages, setChatMessages] = useState<IChatMessages[]>([])
+type RouteProps = {
+  Messages: { thread: FirebaseFirestoreTypes.DocumentData };
+};
 
-    const { thread } = route?.params
-    const user = auth()?.currentUser
+type IMessageProps = StackScreenProps<RouteProps, "Messages">;
 
-    useEffect(() => {
-        const newMessagesListener = firestore().collection('Message_threads')
-            .doc(thread._id).collection('Messages').orderBy('createdAt', 'desc')
-            .onSnapshot(documentSnapshot => {
-                const messages = documentSnapshot.docs.map(doc => {
-                    const firebaseData = doc.data()
+export default function Messages({ route }: IMessageProps) {
+  const [newMessage, setNewMessage] = useState("");
+  const [chatMessages, setChatMessages] = useState<IChatMessages[]>([]);
+  const navigation = useNavigation();
 
-                    const data = {
-                        _id: doc.id,
-                        text: '',
-                        createdAt: firestore.FieldValue.serverTimestamp(),
-                        ...firebaseData
-                    }
+  const { thread } = route?.params;
+  const user = auth()?.currentUser;
 
-                    if (!firebaseData.system) {
-                        data.user = {
-                            ...firebaseData.user,
-                            name: firebaseData.user.displayName
-                        }
-                    }
+  useEffect(() => {
+    navigation.setOptions({
+      title: route.params.thread.name,
+    });
 
-                    return data
-                })
-                setChatMessages(messages)
-            })
+    const newMessagesListener = firestore()
+      .collection("Message_threads")
+      .doc(thread._id)
+      .collection("Messages")
+      .orderBy("createdAt", "desc")
+      .onSnapshot((documentSnapshot) => {
+        const messages = documentSnapshot.docs.map((doc) => {
+          const firebaseData = doc.data();
 
-        return () => newMessagesListener()
-    }, [])
+          const data = {
+            _id: doc.id,
+            text: "",
+            createdAt: firestore.FieldValue.serverTimestamp(),
+            ...firebaseData,
+            user,
+          };
 
-    async function handleSendMessage() {
-        if (newMessage === '') return;
+          if (!firebaseData.system) {
+            data.user = {
+              ...firebaseData.user,
+              name: firebaseData.user.displayName,
+            };
+          }
 
-        await firestore()
-            .collection('Message_threads')
-            .doc(thread._id)
-            .collection('Messages')
-            .add({
-                text: newMessage,
-                createdAt: firestore.FieldValue.serverTimestamp(),
-                user: {
-                    _id: user?.uid,
-                    displayName: user?.displayName
-                }
-            })
+          return data;
+        });
+        setChatMessages(messages);
+      });
 
-        await firestore()
-            .collection('Message_threads')
-            .doc(thread._id)
-            .set(
-                {
-                    lastMessage: {
-                        text: newMessage,
-                        createdAt: firestore.FieldValue.serverTimestamp(),
-                    }
-                },
-                { merge: true }
-            )
+    return () => newMessagesListener();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
-        setNewMessage('');
+  async function handleSendMessage() {
+    if (newMessage === "") return;
 
-    }
+    await firestore()
+      .collection("Message_threads")
+      .doc(thread._id)
+      .collection("Messages")
+      .add({
+        text: newMessage,
+        createdAt: firestore.FieldValue.serverTimestamp(),
+        user: {
+          _id: user?.uid,
+          displayName: user?.displayName,
+        },
+      });
 
-    return (
-        <SafeAreaView style={styles.container}>
+    await firestore()
+      .collection("Message_threads")
+      .doc(thread._id)
+      .set(
+        {
+          lastMessage: {
+            text: newMessage,
+            createdAt: firestore.FieldValue.serverTimestamp(),
+          },
+        },
+        {
+          merge: true,
+          // eslint-disable-next-line comma-dangle
+        }
+      );
 
-            <FlatList
-                style={{ width: '100%' }}
-                showsVerticalScrollIndicator={false}
-                data={chatMessages}
-                keyExtractor={(item) => item._id}
-                renderItem={({ item }) => <MessagesList data={item} />}
-                inverted={true}
+    setNewMessage("");
+  }
+
+  return (
+    <SafeAreaView style={styles.container}>
+      <FlatList
+        style={styles.content}
+        showsVerticalScrollIndicator={false}
+        data={chatMessages}
+        keyExtractor={(item) => item._id}
+        renderItem={({ item }) => <MessagesList data={item} />}
+        inverted={true}
+      />
+
+      <KeyboardAvoidingView
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        style={styles.content}
+        keyboardVerticalOffset={100}
+      >
+        <View style={styles.containerInput}>
+          <View style={styles.mainContainerInput}>
+            <TextInput
+              placeholder="Sua mensagem..."
+              style={styles.textInput}
+              value={newMessage}
+              onChangeText={(text) => setNewMessage(text)}
+              multiline={true}
+              autoCorrect={false}
             />
+          </View>
 
-            <KeyboardAvoidingView
-                behavior={Platform.OS === 'ios' ? "padding" : 'height'}
-                style={{ width: '100%' }}
-                keyboardVerticalOffset={100}
-            >
-                <View style={styles.containerInput}>
-
-                    <View style={styles.mainContainerInput}>
-                        <TextInput
-                            placeholder="Sua mensagem..."
-                            style={styles.textInput}
-                            value={newMessage}
-                            onChangeText={(text) => setNewMessage(text)}
-                            multiline={true}
-                            autoCorrect={false}
-                        />
-                    </View>
-
-                    <TouchableOpacity onPress={handleSendMessage}>
-                        <View style={styles.buttonContainer}>
-                            <Feather name="send" size={26} color="#FFF" />
-                        </View>
-                    </TouchableOpacity>
-
-                </View>
-            </KeyboardAvoidingView>
-
-        </SafeAreaView>
-    )
+          <TouchableOpacity onPress={() => handleSendMessage()}>
+            <View style={styles.buttonContainer}>
+              <Feather name="send" size={26} color="#FFF" />
+            </View>
+          </TouchableOpacity>
+        </View>
+      </KeyboardAvoidingView>
+    </SafeAreaView>
+  );
 }
