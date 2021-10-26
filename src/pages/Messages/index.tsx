@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useLayoutEffect } from "react";
 import {
   KeyboardAvoidingView,
   Platform,
@@ -34,6 +34,12 @@ export default function Messages({ route }: IMessageProps) {
 
   const { thread } = route?.params;
   const user = auth()?.currentUser;
+
+  useLayoutEffect(() => {
+    navigation.setOptions({
+      title: route.params.thread.name,
+    });
+  }, [navigation, route.params.thread.name]);
 
   useEffect(() => {
     navigation.setOptions({

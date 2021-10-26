@@ -25,7 +25,7 @@ type IThreads = FirebaseFirestoreTypes.DocumentData;
 
 export default function Home() {
   const navigation = useNavigation();
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
 
   const [user, setUser] = useState<IUser>(null);
   const [modalVisibility, setModalVisibility] = useState(false);
@@ -107,7 +107,7 @@ export default function Home() {
   if (loading) {
     return (
       <View style={styles.loading}>
-        <ActivityIndicator size={50} color="#102A43" />
+        <ActivityIndicator size={50} color="#e52246" />
       </View>
     );
   }

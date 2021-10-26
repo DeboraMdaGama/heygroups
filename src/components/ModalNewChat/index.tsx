@@ -96,7 +96,7 @@ export default function ModalNewChat({
         />
         <TouchableOpacity
           style={styles.createChatButton}
-          onPress={() => handleCreateChat}
+          onPress={() => handleCreateChat()}
         >
           <Text style={styles.createChatButtonText}>Criar Chat</Text>
         </TouchableOpacity>
